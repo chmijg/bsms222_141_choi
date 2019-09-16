@@ -1,0 +1,206 @@
+---
+title: "20190916"
+output: html_notebook
+---
+
+## 4.4 For-loops
+
+The formula for the sum of the series 1+2+...+n is n(n+1)/2. Using what we learned about functions we can creat one that computes the Sn:
+```{r}
+compute_s_n <- function(n){
+  x<-1:n
+  sum(x)
+}
+```
+
+n=1,...,25일때 Sm을 어떻게 계산할까? 이 때 for-loops를 사용한다.
+```{r}
+for(i in 1:5){
+  print(i)
+}
+```
+
+our Sn example:
+```{r}
+m <- 25
+s_n <- vector(length = m)
+for(n in 1:m){
+  s_n[n] <- compute_s_n(n)
+}
+```
+
+```{r}
+n <- 1:m
+plot(n,s_n)
+```
+
+```{r}
+head(data.frame(s_n = s_n, formula = n*(n+1)/2))
+```
+
+```{r}
+plot(n, s_n)
+lines(n,n*(n+1)/2)
+```
+
+## 4.5 Vectorization and functionals
+
+*Vectorization* is preferred over for-loop since it results in shorter and clearer code. A vectorized function is a function that will apply the same operation on each of the vectors.
+```{r}
+x <- 1:10
+sqrt(x)
+y <- 1:10
+x*y
+```
+
+This time, we don't need for-loops.The function we just wrote,`compute_s_n`, does not work on each entry of `n`: 
+```{r}
+n <- 1:25
+compute_s_n(n)
+```
+
+Functionals are functions which can apply the same function to each entry in all type of data. 
+For numeric, logical, and character vector: `sapply`
+
+The funtion `sapply` can do element-wise operation.
+
+```{r}
+x <- 1:10
+sapply(x,sqrt)
+```
+This result is a vector of same length as the original `x`. 
+
+The for-loop above can be written:
+```{r}
+n <- 1:25
+s_n <- sapply(n,compute_s_n)
+plot(n,s_n)
+```
+Other functials are `apply`, `lapply`, `tapply`, `mapply`, `vapply`, and `replicate`. 
+
+## 4.6 Exercises
+
+1. What will this conditional expression return?
+```{r}
+x <- c(1,2,-3,4)
+
+if(all(x>0)){
+  print("All Postives")
+} else{
+  print("Not all positives")
+}
+```
+
+2. Which of the following expressions is always `FALSE` when at least one entry of a logical vector `x` is TRUE?
+
+```{r}
+x <- c(TRUE, TRUE, TRUE)
+
+all(!x)
+```
+
+A. all(x)
+
+B. any(x)
+
+C. any(!x)
+
+**D. all(!x)**
+
+3. The function `nchar` tells you how many characters long a character vector is.
+
+Write a line of code that assigns to the object `new_names` the state abbreviation when the state name is longer than 8 characters.
+```{r}
+dslabs::murders
+data(murders)
+new_names <- ifelse(((nchar(murders$state)) > 8), murders$abb, murders$state)
+new_names
+```
+
+4. Create a function `sum_n` that for any given value, say n, computes the sum of the integers from 1 to n (inclusive). Use the function to determine the sum of integers from 1 to 5,000.
+```{r}
+sum_n <- function(n){
+  sum(1:n)
+}
+sum_n(5000)
+```
+
+5. Create a function `altman_plot` that takes two arguments, `x` and `y`, and plots the difference against the sum.
+```{r}
+altman_plot <- function(x,y){
+  a = x-y
+  b = x+y
+  plot(x,y)
+}
+altman_plot(x,y)
+```
+??? 해당 plot이 무엇을 보고자 하는지 조차 이해되지 않았으며 function을 지정했지만 length가 달라 실행되지 않는다.
+
+
+6. After running the code below, what is the value of `x`?
+```{r}
+x <- 3
+my_func <- function(y){
+  x <- 5
+  y+5
+}
+x
+```
+
+7. Write a function `compute_s_n` that for any given n computes the sum Sn = 1^2 + 2^2 + 3^2 +...n^2.Report the value of the sum when  n=10.
+```{r}
+compute_s_n <- function(n){
+  x <- 1:n
+  sum(x^2)
+}
+compute_s_n(10)
+```
+
+8. Define an empty numerical vector `s_n` of size 25 using 
+`s_n <- vector("numeric", 25)` and store in the results of S1,S2,...S25 using a for-loop.
+```{r}
+m <- 25
+s_n <- vector("numeric", 25)
+for(n in 1:m){
+  s_n[n] <- compute_s_n(n)
+}
+```
+
+
+9. Repeat exercise 8, but this time use `sapply`.
+```{r}
+n <- 1:25
+sapply(n,compute_s_n)
+```
+
+10. Repeat exercise 8, but this time use `map_dbl.`
+```{r}
+library(purrr)
+map_dbl(n,compute_s_n)
+```
+
+11. Plot Sn versus n. Use points defined by n = 1,...,25. 
+```{r}
+n <- 1:25
+plot(n,s_n)
+lines(n,s_n)
+```
+
+12. Confirm that the formular for this sum is Sn =n(n+1)(2n+1)/6
+```{r}
+new_func <- function(n){
+  p <- n*(n+1)*(2*n+1)/6
+  p
+}
+sapply(n,compute_s_n)
+sapply(n,new_func) 
+```
+logical적으로 일치함을 TRUE로 나타낼 수 있다면 좋을 것 같지만 성공하지 못했다. 
+
+This is the last of chapter 4.
+
+
+
+
+
+
