@@ -1,5 +1,5 @@
 ---
-title: "20191007
+title: "20191007"
 output: html_notebook
 ---
 
@@ -213,6 +213,7 @@ dat %>%
 it permits us to quickly get an idea of changes based on the slope of the lines. 
 
 ### 11.8.2 Bland-Altman plot
+
 This shows the difference versus the average:
 ```{r}
 library(ggrepel)
