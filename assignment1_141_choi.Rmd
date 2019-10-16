@@ -1,0 +1,92 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## Frequency of existing variant in gnomAD(gnomAD_AF)과 IMPACT의 관계
+
+
+### 1. Dataset
+
+분석하고자 하는 자료는 neurodevelopmental patients의 SCN2A mutation list이다. 
+해당하는 자료를 불러오고 추가로 주어진 header를 확인한다.
+```{r}
+d = read.csv('table.scn2a.vep_20190916.filtered.txt', sep='\t')
+header = read.csv('table.scn2a.vep_20190916.headers.txt',sep='\t')
+```
+
+Plot으로 표현하고자 하는 주제는 frequency of existing variant in gnomAD(gnomAD_AF)과 IMPACT의 관계이다. 따라서 필요한 column은 다음과 같다.
+
+1) Consequence: Consequence type
+
+2) IMPACT: Subjective impact classification of consequence type
+
+3) gnomAD_AF: Frequency of existing variant in gnomAD exomes combined population
+
+이 세가지만 기존 dataframe에서 골라 새로운 dataframe을 만들었다. 
+```{r}
+table <- d %>% select( Consequence, gnomAD_AF, IMPACT) %>% mutate(gnomAD = log(gnomAD_AF)*100 + 1500)
+```
+
+IMPACT와의 관계를 살피기 위해 IMPACT에 따라 high, moderate, low로 구분지었다. 이때 많은 variant의 gnomAD가 0임을 확인할 수 있었다.
+```{r}
+high_impact <- table %>%  filter(IMPACT == "HIGH") %>% arrange(Consequence)
+moderate_impact <- table %>% filter(IMPACT == "MODERATE") %>% arrange(Consequence)
+low_impact <- table %>%  filter(IMPACT == "LOW") %>% arrange(Consequence)
+
+low_impact %>% filter(gnomAD == 0) %>% count()
+moderate_impact %>% filter(gnomAD == 0) %>% count()
+high_impact %>% filter(gnomAD == 0) %>% count()
+```
+
+
+A single-nucleotide variant (SNV) is a variation in a single nucleotide without any limitations of frequency and may arise in somatic cells. A somatic single-nucleotide variation (e.g., caused by cancer) may also be called a single-nucleotide alteration
+
+```{r}
+low_impact %>% count(Consequence)
+moderate_impact %>% count(Consequence)
+high_impact %>% count(Consequence)
+```
+IMPACT는 consequence에 따라 주는 영향에 의해서 분류되었으므로 해당 consequence를 확인했다. 
+
+**low_impact**
+: synonymous_variant
+
+
+**moderate_impact**
+: inframe_deletion, inframe_insertion, missense_variant, splice_region_variant
+
+
+**high_impact**
+: frameshift_variant, stop_gained, stop_lost
+
+
+
+A synonymous substitution (often called a silent substitution though they are not always silent) is the evolutionary substitution of one base for another in an exon of a gene coding for a protein, such that the produced amino acid sequence is not modified.
+
+
+#### 2. Visualization
+
+IMPACT를 기준으로 나눠 variant의 gnomAD 값을 비교해 jitter plot으로 나타냈다.
+이때 각 IMPACT에 해당하는 consequence를 확인하기 위해 다른 색상으로 표현했다.
+또한 gnomAD값이 0인 경우를 제외하고 axis를 한정해 해당하는 값만 확인했다.
+
+```{r}
+table %>% filter(gnomAD != 0) %>% ggplot(aes(x= gnomAD, y= IMPACT, col=Consequence)) +
+  geom_jitter(alpha=.7, size=0.6) +
+  scale_x_continuous(limits = c(100, 1000))+
+  labs(x='Frequency of existing variant in gnomAD exomes',
+       title='Impact and Frequency of Existing Variant')
+```
+
+
+Plot에서 보듯이 moderate impact의 대부분은 missense variant임을 확인할 수 있었다. Low impact는 synonymous variant로만 이루어져있으며 high impact의 경우 stop gained/lost의 dot이 확인되었다. 
+
+거의 dot들은 gnomAD가 낮은 편으로 보여지며 high, moderate, low 순으로 frequency가 높은 variant가 관찰됐다.
+
+결론적으로, mutation은 대부분 low impact와 moderate impact를 가지며 이때 frequency는 다양하게 분포되어있지만 낮은 쪽에 더 분포되어있다. 그리고 High의 경우 variant 자체가 적게 나타났고 frequency 또한 높은 편은 아니였다. 따라서 mutation은 거의 impact가 낮은 경우가 frequency가 높다고 할 수 있다. 
+
+
+
+
+
