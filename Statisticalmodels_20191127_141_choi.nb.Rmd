@@ -1,0 +1,154 @@
+---
+title: "20191126"
+output: html_notebook
+---
+
+# Chapter 16 Statistical models
+
+## 16.1 Poll aggregators
+We will use a Monte Carlo simulation to illustrate the insight Mr.Silver had and others missed. To do this, we generate results for 12 polls taken the week before the election. We mimic sample sizes from actual polls and construct and report 95% confidence intervals for each of the 12 polls. We save the results from this simulation in a data frame and add a poll ID column.
+
+```{r}
+library(tidyverse)
+library(dslabs)
+d <- 0.039
+Ns <- c(1298, 533, 1342, 897, 774, 254, 812, 324, 1291, 1056, 2172, 516)
+p <- (d + 1) / 2
+
+polls <- map_df(Ns, function(N) {
+  x <- sample(c(0,1), size=N, replace=TRUE, prob=c(1-p, p))
+  x_hat <- mean(x)
+  se_hat <- sqrt(x_hat * (1 - x_hat) / N)
+  list(estimate = 2 * x_hat - 1, 
+    low = 2*(x_hat - 1.96*se_hat) - 1, 
+    high = 2*(x_hat + 1.96*se_hat) - 1,
+    sample_size = N)
+}) %>% mutate(poll = seq_along(Ns))
+```
+
+However, all 12 polls also include 0 (solid black line) as well. Therefore, if asked individually for a prediction, the pollsters would have to say: it’s a toss-up. Below we describe a key insight they are missing.
+
+Poll aggregators realized that by combining the results of different polls you could greatly improve precision. 
+-> effectively conductiong a poll with a huge sample size
+= can report a small34 95% confidence interval and a more precise prediction.
+
+Although as aggregators we do not have access to the raw poll data, we can use mathematics to reconstruct what we would have obtained had we made one large poll with:
+```{r}
+sum(polls$sample_size)
+```
+participants. Basically, we construct an estimate of the spread, let's all it $d$, with a weighted average in the following way:
+```{r}
+d_hat <- polls %>% 
+  summarize(avg = sum(estimate*sample_size) / sum(sample_size)) %>% 
+  pull(avg)
+```
+Once we have an estimate of $d$, we can use to estimate the standard error. Once we do this, we see that our margin of error is 0.018.
+
+Thus, we can predict that the spread will be 3.1 plus or minus 1.8, which not only includes the actual result we eventually observed on election night, but is quite far from including 0. 
+### 16.1.1 Poll data
+We use public polling data organized by FiveThirtyEight for the 2016 presidential election. The data is included as part of the dslabs package:
+```{r}
+data(polls_us_election_2016)
+```
+The table includes results for national polls, as well as state polls, taken during the year prior to the election. For this first example, we will filter the data to include national polls conducted during the week before the election. We also remove polls that FiveThirtyEight has determined not to be reliable and graded with a “B” or less. Some polls have not been graded and we include those:
+```{r}
+polls <- polls_us_election_2016 %>% 
+  filter(state == "U.S." & enddate >= "2016-10-31" &
+           (grade %in% c("A+","A","A-","B+") | is.na(grade)))
+```
+
+We add a spread estimate:
+```{r}
+polls <- polls %>% 
+  mutate(spread = rawpoll_clinton/100 - rawpoll_trump/100)
+```
+
+For this example, we will assume that there are only two parties and call $p$ the proportion voting for Clinton and $1-p$ the proportion voting for Trump. We are interested in the spread $2p-1$ = spread $d$ = expected value
+standard error = $2\sqrt{p/(1-p)/N}$. 
+
+The estimated spread is:
+```{r}
+d_hat <- polls %>% 
+  summarize(d_hat = sum(spread * samplesize) / sum(samplesize)) %>% 
+  pull(d_hat)
+```
+and the standard error is:
+```{r}
+p_hat <- (d_hat+1)/2 
+moe <- 1.96 * 2 * sqrt(p_hat * (1 - p_hat) / sum(polls$samplesize))
+moe
+```
+
+So we report a spread of 1.43% with a margin of error of 0.66%. On election night, we discover that the actual percentage was 2.1%, which is outside a 95% confidence interval. What happened?
+
+A histogram of the reported spreads shows a problem:
+```{r}
+polls %>%
+  ggplot(aes(spread)) +
+  geom_histogram(color="black", binwidth = .01)
+```
+
+The data does not appear to be normally distributed and the standard error appears to be larger than 0.007. The theory is not quite working here.
+
+### 16.1.2 Pollster bias
+Notice that various pollsters are involved and some are taking several polls a week:
+```{r}
+polls %>% group_by(pollster) %>% summarize(n())
+```
+
+First, consider that the standard error predicted by theory for each poll:
+```{r}
+polls %>% group_by(pollster) %>% 
+  filter(n() >= 6) %>%
+  summarize(se = 2 * sqrt(p_hat * (1-p_hat) / median(samplesize)))
+```
+is between 0.018 and 0.033, which agrees with the within poll variation we see. However, there appears to be differences across the polls. Note, for example, how the USC Dornsife/LA Times pollster is predicting a 4% win for Trump, while Ipsos is predicting a win larger than 5% for Clinton. The theory we learned says nothing about different pollsters producing polls with different expected values. All the polls should have the same expected value. FiveThirtyEight refers to these differences as “house effects”. We also call them pollster bias.
+
+In the following section, rather than use the urn model theory, we are instead going to develop a data-driven model.
+
+
+## 16.2 Data-driven models
+For each pollster, let’s collect their last reported result before the election:
+```{r}
+one_poll_per_pollster <- polls %>% group_by(pollster) %>% 
+  filter(enddate == max(enddate)) %>%
+  ungroup()
+```
+Here is a histogram of the data for these 15 pollsters:
+```{r}
+qplot(spread, data = one_poll_per_pollster, binwidth = 0.01)
+```
+We have two unknown parameters: the expected value $d$ and the standard deviation $σ$. 
+sample standard deviation defined as $s=\sqrt{\sum(X_i-\bar{X})^2/(N-1)}$.
+
+The `sd` function in R computes the sample standard deviation:
+```{r}
+sd(one_poll_per_pollster$spread)
+```
+
+We are now ready to form a new confidence interval based on our new data-driven model:
+```{r}
+results <- one_poll_per_pollster %>% 
+  summarize(avg = mean(spread), 
+            se = sd(spread) / sqrt(length(spread))) %>% 
+  mutate(start = avg - 1.96 * se, 
+         end = avg + 1.96 * se) 
+round(results * 100, 1)
+```
+Our confidence interval is wider now since it incorporates the pollster variability. It does include the election night result of 2.1%. Also, note that it was small enough not to include 0, which means we were confident Clinton would win the popular vote.
+
+## 16.3 Exercise
+We have been using urn models to motivate the use of probability models. Most data science applications are not related to data obtained from urns. More common are data that come from individuals. The reason probability plays a role here is because the data come from a random sample. The random sample is taken from a population and the urn serves as an analogy for the population.
+
+Let’s revisit the heights dataset. Suppose we consider the males in our course the population.
+```{r}
+library(dslabs)
+data(heights)
+x <- heights %>% filter(sex == "Male") %>%
+  pull(height)
+```
+1. Mathematically speaking, x is our population. Using the urn analogy, we have an urn with the values of x in it. What are the average and standard deviation of our population?
+
+2. Call the population average computed above $μ$ and the standard deviation $σ$. Now take a sample of size 50, with replacement, and construct an estimate for $μ$ and $σ$.
+
+3. What does the theory tell us about the sample average $\bar{X}$ and how it is related to $μ$?
