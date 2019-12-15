@@ -47,9 +47,6 @@ low_impact <-  d2 %>%
   filter(IMPACT == "LOW") %>% 
   arrange(Consequence)
 
-low_impact %>% filter(gnomAD == 0) %>% count()
-moderate_impact %>% filter(gnomAD == 0) %>% count()
-high_impact %>% filter(gnomAD == 0) %>% count()
 ```
 
 A single-nucleotide variant (SNV) is a variation in a single nucleotide without any limitations of frequency and may arise in somatic cells. A somatic single-nucleotide variation (e.g., caused by cancer) may also be called a single-nucleotide alteration
@@ -118,8 +115,7 @@ p2 <- d3 %>% filter(gnomAD != 0) %>%
   ggplot(aes(x= gnomAD, y= IMPACT, col=Group)) +
   geom_jitter(alpha=.7, size=0.6) +
   scale_x_continuous(limits = c(100, 1000))+
-  labs(x='Frequency of existing variant in gnomAD exomes',
-       title="IMPACT of each disease type from SCN2A mutaion")
+  labs(x='Frequency of existing variant in gnomAD exomes')
 
 p3 <- d3 %>% filter(gnomAD != 0) %>%
   ggplot(aes(x= IMPACT, fill=Group)) +
