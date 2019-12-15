@@ -108,14 +108,14 @@ p1 <- d2 %>% filter(gnomAD != 0) %>%
   ggplot(aes(x= gnomAD, y= IMPACT, col=Consequence)) +
   geom_jitter(alpha=.7, size=0.6) +
   scale_x_continuous(limits = c(100, 1000))+
-  labs(x='Frequency of existing variant in gnomAD exomes',
+  labs(x='Frequency of existing variant(Log)',
        title='Impact and Frequency of Existing Variant')
 
 p2 <- d3 %>% filter(gnomAD != 0) %>% 
   ggplot(aes(x= gnomAD, y= IMPACT, col=Group)) +
   geom_jitter(alpha=.7, size=0.6) +
   scale_x_continuous(limits = c(100, 1000))+
-  labs(x='Frequency of existing variant in gnomAD exomes')
+  labs(x='Frequency of existing variant(Log)')
 
 p3 <- d3 %>% filter(gnomAD != 0) %>%
   ggplot(aes(x= IMPACT, fill=Group)) +
