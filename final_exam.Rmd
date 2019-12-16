@@ -1,0 +1,166 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+
+Q1. From the dataset 'heights' in the 'dslabs' package, please describe the distribution of male and frmale heights. If you pick a female ar tandom, what is the probability that she is 61 inches or shorter?
+```{r}
+library(dslabs)
+h <- dslabs::heights
+
+B <- 10000
+n <- 100
+
+#Distribution of male heights
+h_m <- filter(h, sex == "Male")
+m_m <- mean(h_m$height)
+sd_m <- sd(h_m$height)
+
+height_m <- replicate(B,{
+  simulation_m <- rnorm(h_m,m_m,sd_m)
+  mean(simulation_m)
+})
+p1 <- hist(height_m)
+  
+#Distribution of female heights
+h_f <- filter(h, sex == "Female")
+m_f <- mean(h_f$height)
+sd_f <- sd(h_f$height)
+
+height_f <- replicate(B,{
+  simulation_f <- rnorm(h_f,m_f,sd_f)
+  mean(simulation_f)
+})
+p2 <- hist(height_f)
+
+
+
+#The probability that a female is 61 inches or shorter picked at random
+pnorm(61,m_f,sd_f)
+
+
+```
+Male과 female의 height의 distribution을 살펴보기 위해 mean value와 SD value를 구하고 rnorm을 이용해 histogram을 그렸다. 
+61 inches보다 짧은 여성이 random으로 뽑힐 확률은 pnorm을 이용해 계산했다. 
+
+
+Q2. For American Roulette,there are 19 reds, 16 blacks and 3 greens. The payout for winning on green is 15 dollars. You create a random variable that is the sum of your winnings after betting on green 1000 times. Start our code by setting the seed to 1. Describe your random variable(e.g. the expected value, the standard error). Then, create a Monte Carlo simulation that generates 1,000 outcomes of a random variable, and tnem describe your result.
+
+```{r}
+# Random variable, A
+set.seed(1)
+B <- 1000
+X <- sample(c(15,-1), B, replace = TRUE, prob = c(3/38,35/38))
+S <- sum(X)
+expected_value <- B*(3/38*15+35/38*-1)
+standard_error <- sqrt(B)*abs((15--1)*sqrt(3/38*35/38))
+expected_value
+standard_error
+
+# Monte Carlo simulation
+set.seed(1)
+simulation <- replicate(B,{
+  X <- sample(c(15,-1), B, replace = TRUE, prob = c(3/38,35/38))
+  sum(X)
+})
+mean(simulation)
+sd(simulation)
+```
+Random variable A를 sum(x)로 지정해 설정했다. 공식으로 구한 expected value와 standard error를 monte carlo simulation 시 결과와 비교해 나타냈다.
+
+
+Q3. From the poll example, we will create a Monte Carlo simulation for p = 0.45. You will compare sampling (N) for 10, 1000 and the repeat size (B) for 100, 10000. So you should have four combinations(10N X 100B, 1000N X 100B, 10N X 10000B, 1000N X 10000B). Please describe your Monte Carlo simulation results and compare four combinations.
+
+```{r}
+p <- 0.45
+N_1 <- 10
+N_2 <- 1000
+B_1 <- 100
+B_2 <- 10000
+
+#1 10N X 100B
+x_1 <- sample(c(0,1), size = N_1, replace = TRUE, prob = c(1-p, p))
+
+x_hat_1 <- replicate(B_1, {
+  x_1 <- sample(c(0,1), size = N_1, replace = TRUE, prob = c(1-p, p))
+  mean(x_1)
+})
+
+p1 <- data.frame(x_hat_1) %>% 
+  ggplot(aes(x_hat_1)) +
+  geom_histogram(color="black", fill="gray") +
+  labs(title='10 N x 100 B')
+p2 <- data.frame(x_hat_1) %>% 
+  ggplot(aes(x_hat_1, x_hat_1)) + 
+  geom_point() +
+  geom_abline(intercept=0, y=1) +
+  xlab("Theoretical nomal")
+
+
+#2 1000N X 100B
+x_2 <- sample(c(0,1), size = N_2, replace = TRUE, prob = c(1-p, p))
+
+x_hat_2 <- replicate(B_1, {
+  x_2 <- sample(c(0,1), size = N_2, replace = TRUE, prob = c(1-p, p))
+  mean(x_2)
+})
+
+p3 <- data.frame(x_hat_2) %>% 
+  ggplot(aes(x_hat_2)) +
+  geom_histogram(color="black", fill="gray") +
+  labs(title='1000 N x 100 B')
+p4 <- data.frame(x_hat_2) %>% 
+  ggplot(aes(x_hat_2, x_hat_2)) + 
+  geom_point() +
+  geom_abline(intercept=0, y=1) +
+  xlab("Theoretical nomal")
+
+#3 10N X 1000B
+x_3 <- sample(c(0,1), size = N_1, replace = TRUE, prob = c(1-p, p))
+
+x_hat_3 <- replicate(B_2, {
+  x_3 <- sample(c(0,1), size = N_1, replace = TRUE, prob = c(1-p, p))
+  mean(x_3)
+})
+
+p5 <- data.frame(x_hat_3) %>% 
+  ggplot(aes(x_hat_3)) +
+  geom_histogram(color="black", fill="gray") +
+  labs(title='10 N x 10000 B')
+p6 <- data.frame(x_hat_3) %>% 
+  ggplot(aes(x_hat_3, x_hat_3)) + 
+  geom_point() +
+  geom_abline(intercept=0, y=1) +
+  xlab("Theoretical nomal")
+
+#4 100N X 1000B
+x_4 <- sample(c(0,1), size = N_2, replace = TRUE, prob = c(1-p, p))
+
+x_hat_4 <- replicate(B_2, {
+  x_4 <- sample(c(0,1), size = N_2, replace = TRUE, prob = c(1-p, p))
+  mean(x_4)
+})
+
+p7 <- data.frame(x_hat_4) %>% 
+  ggplot(aes(x_hat_4)) +
+  geom_histogram(color="black", fill="gray") +
+  labs(title='1000 N x 10000 B')
+p8 <- data.frame(x_hat_4) %>% 
+  ggplot(aes(x_hat_4, x_hat_4)) + 
+  geom_point() +
+  geom_abline(intercept=0, y=1) +
+  xlab("Theoretical nomal")
+
+plot_grid(
+  p1, p2, p3, p4,p5,p6,p7,p8,
+  labels = "AUTO", ncol = 2
+)
+
+
+```
+각각 2종류의 sampling size(N)과 repeat size(B)로 총 4가지의 조합을 가질 때 Monte Carlo simutlation의 결과를 나타냈다. 먼저 sampling size가 적을 때는 distribution이 촘촘하지 못하고 값이 듬성듬성 존재하게 된다. Repeat size는 작을 때보다 클 때 normal distribution에 가까운 모습을 보인다. 
+
+
